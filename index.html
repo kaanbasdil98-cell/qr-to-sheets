@@ -1,0 +1,84 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>QR Kamera ile Gönder</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
+        #reader { width: 100%; margin: auto; max-width: 400px; }
+        #qrInput, button { width: 100%; padding: 10px; margin-top: 10px; font-size: 16px; }
+        #status { margin-top: 15px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h2>📷 QR Kodunu Kamerayla Tara</h2>
+    <div id="reader"></div>
+    <textarea id="qrInput" placeholder="QR verisi burada gözükecek..." readonly></textarea>
+    <button onclick="sendData()">Gönder</button>
+    <div id="status"></div>
+
+    <script>
+        const scriptURL = "https://script.google.com/macros/s/AKfycbyobqvExRbP9FNKDEjfDhLbyKzMTZOPdl9dnN8g7FCTZ23DEFtMnQ1mNyPCPHvrt3IS/exec";
+
+        function sendData() {
+            const raw = document.getElementById("qrInput").value.trim();
+            const parts = raw.split(/\s+/);
+            if (parts.length !== 11) {
+                document.getElementById("status").innerText = "❌ Hata: Veri 11 parçaya ayrılamadı.";
+                return;
+            }
+
+            const params = new URLSearchParams({
+                tarih: parts[0],
+                siparis_no: parts[1],
+                musteri_adi: parts[2],
+                urun_adi: parts[3],
+                lot_no: parts[4],
+                urt: parts[5],
+                skt: parts[6],
+                uretim_hatti: parts[7],
+                operator: parts[8],
+                vardiya: parts[9],
+                palet_koli: parts[10]
+            });
+
+            fetch(`${scriptURL}?${params.toString()}`)
+                .then(response => {
+                    if (response.ok) {
+                        document.getElementById("status").innerText = "✅ Veri başarıyla gönderildi.";
+                        document.getElementById("qrInput").value = "";
+                        setTimeout(() => startScanner(), 500);
+                    } else {
+                        document.getElementById("status").innerText = "❌ Gönderim hatası.";
+                    }
+                })
+                .catch(error => {
+                    document.getElementById("status").innerText = "❌ Hata oluştu: " + error;
+                });
+        }
+
+        let qrReader;
+
+        function startScanner() {
+            if (qrReader) qrReader.stop();
+            qrReader = new Html5Qrcode("reader");
+            qrReader.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: 250 },
+                (decodedText, decodedResult) => {
+                    document.getElementById("qrInput").value = decodedText;
+                    document.getElementById("status").innerText = "QR okundu, gönderilmeye hazır.";
+                    qrReader.stop();
+                },
+                (errorMessage) => {}
+            ).catch(err => {
+                document.getElementById("status").innerText = "❌ Kamera başlatılamadı: " + err;
+            });
+        }
+
+        startScanner();
+    </script>
+</body>
+</html>
