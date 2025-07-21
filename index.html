@@ -1,84 +1,83 @@
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <title>QR Kamera ile Gönder (Otomatik Tarih)</title>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
-        #reader { width: 100%; margin: auto; max-width: 400px; }
-        #qrInput, button { width: 100%; padding: 10px; margin-top: 10px; font-size: 16px; }
-        #status { margin-top: 15px; font-weight: bold; }
-    </style>
+  <meta charset="UTF-8">
+  <title>Ürün Takip Sistemi</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    #reader {
+      width: 300px;
+      margin: auto;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+  </style>
 </head>
 <body>
-    <h2>📷 QR Kodunu Tara (Tarih Otomatik)</h2>
-    <div id="reader"></div>
-    <textarea id="qrInput" placeholder="QR verisi burada gözükecek..." readonly></textarea>
-    <button onclick="sendData()">Gönder</button>
-    <div id="status"></div>
+  <h1>QR Kod Okuyucu</h1>
+  <div id="reader"></div>
+  <p id="result"></p>
 
-    <script>
-        const scriptURL = "https://script.google.com/macros/s/AKfycbxKXHMHGZa05NFAyBS2FcpeycpS0F58TgQGDnzAH8l--6oGiRuvXUP_sXoiA0QnQzyT/exec";
+  <script>
+    const sheetURL = "https://script.google.com/macros/s/AKfycbxXWi5XdSixbAIkH4tEzDBK8DagLq_GGOsT1pKWF98CC3nFrakdjAXKslxLEH8Hso8/exec";
 
-        function smartSplit(str) {
-            const regex = /"(.*?)"|\S+/g;
-            const result = [];
-            let match;
-            while ((match = regex.exec(str))) {
-                result.push(match[1] ? match[1] : match[0]);
-            }
-            return result;
-        }
+    function sendToSheet(data) {
+      const parts = data.trim().split(/\s+/);
 
-        function sendData() {
-            const raw = document.getElementById("qrInput").value.trim();
-            const parts = smartSplit(raw);
-            if (parts.length !== 10) {
-                document.getElementById("status").innerText = "❌ Hata: Veri 10 parçaya ayrılamadı.";
-                return;
-            }
+      if (parts.length < 11) {
+        alert("QR verisi eksik veya hatalı!");
+        return;
+      }
 
-            const params = new URLSearchParams({
-                qr: raw
-            });
+      const [siparis_no, musteri_adi, urun_adi, lot_no, urt, skt, uretim_hatti, operator, vardiya, palet_koli] = parts;
 
-            fetch(`${scriptURL}?${params.toString()}`)
-                .then(response => {
-                    if (response.ok) {
-                        document.getElementById("status").innerText = "✅ Veri başarıyla gönderildi.";
-                        document.getElementById("qrInput").value = "";
-                        setTimeout(() => startScanner(), 500);
-                    } else {
-                        document.getElementById("status").innerText = "❌ Gönderim hatası.";
-                    }
-                })
-                .catch(error => {
-                    document.getElementById("status").innerText = "❌ Hata oluştu: " + error;
-                });
-        }
+      const params = new URLSearchParams({
+        siparis_no,
+        musteri_adi,
+        urun_adi,
+        lot_no,
+        urt,
+        skt,
+        uretim_hatti,
+        operator,
+        vardiya,
+        palet_koli
+      });
 
-        let qrReader;
+      fetch(`${sheetURL}?${params.toString()}`)
+        .then(res => res.text())
+        .then(msg => {
+          document.getElementById("result").innerText = "Başarılı: " + msg;
+        })
+        .catch(err => {
+          console.error(err);
+          document.getElementById("result").innerText = "Hata oluştu!";
+        });
+    }
 
-        function startScanner() {
-            if (qrReader) qrReader.stop();
-            qrReader = new Html5Qrcode("reader");
-            qrReader.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: 250 },
-                (decodedText, decodedResult) => {
-                    document.getElementById("qrInput").value = decodedText;
-                    document.getElementById("status").innerText = "QR okundu, gönderilmeye hazır.";
-                    qrReader.stop();
-                },
-                (errorMessage) => {}
-            ).catch(err => {
-                document.getElementById("status").innerText = "❌ Kamera başlatılamadı: " + err;
-            });
-        }
-
-        startScanner();
-    </script>
+    const qrReader = new Html5Qrcode("reader");
+    Html5Qrcode.getCameras().then(cameras => {
+      if (cameras && cameras.length) {
+        qrReader.start(
+          cameras[0].id,
+          { fps: 10, qrbox: 250 },
+          (decodedText) => {
+            qrReader.stop();
+            document.getElementById("result").innerText = "Okunan Veri: " + decodedText;
+            sendToSheet(decodedText);
+          }
+        );
+      }
+    }).catch(err => {
+      console.error("Kamera bulunamadı:", err);
+      document.getElementById("result").innerText = "Kamera bulunamadı";
+    });
+  </script>
 </body>
 </html>
