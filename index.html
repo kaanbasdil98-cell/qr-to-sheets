@@ -3,7 +3,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>QR Kamera ile Gönder</title>
+    <title>QR Kamera ile Gönder (Otomatik Tarih)</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
@@ -13,35 +13,35 @@
     </style>
 </head>
 <body>
-    <h2>📷 QR Kodunu Kamerayla Tara</h2>
+    <h2>📷 QR Kodunu Tara (Tarih Otomatik)</h2>
     <div id="reader"></div>
     <textarea id="qrInput" placeholder="QR verisi burada gözükecek..." readonly></textarea>
     <button onclick="sendData()">Gönder</button>
     <div id="status"></div>
 
     <script>
-        const scriptURL = "https://script.google.com/macros/s/AKfycbyobqvExRbP9FNKDEjfDhLbyKzMTZOPdl9dnN8g7FCTZ23DEFtMnQ1mNyPCPHvrt3IS/exec";
+        const scriptURL = "https://script.google.com/macros/s/AKfycbxKXHMHGZa05NFAyBS2FcpeycpS0F58TgQGDnzAH8l--6oGiRuvXUP_sXoiA0QnQzyT/exec";
+
+        function smartSplit(str) {
+            const regex = /"(.*?)"|\S+/g;
+            const result = [];
+            let match;
+            while ((match = regex.exec(str))) {
+                result.push(match[1] ? match[1] : match[0]);
+            }
+            return result;
+        }
 
         function sendData() {
             const raw = document.getElementById("qrInput").value.trim();
-            const parts = raw.split(/\s+/);
-            if (parts.length !== 11) {
-                document.getElementById("status").innerText = "❌ Hata: Veri 11 parçaya ayrılamadı.";
+            const parts = smartSplit(raw);
+            if (parts.length !== 10) {
+                document.getElementById("status").innerText = "❌ Hata: Veri 10 parçaya ayrılamadı.";
                 return;
             }
 
             const params = new URLSearchParams({
-                tarih: parts[0],
-                siparis_no: parts[1],
-                musteri_adi: parts[2],
-                urun_adi: parts[3],
-                lot_no: parts[4],
-                urt: parts[5],
-                skt: parts[6],
-                uretim_hatti: parts[7],
-                operator: parts[8],
-                vardiya: parts[9],
-                palet_koli: parts[10]
+                qr: raw
             });
 
             fetch(`${scriptURL}?${params.toString()}`)
